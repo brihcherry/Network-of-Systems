@@ -9,6 +9,7 @@
 //   3. If the page is an MCP tool UI, set its path to match the resourceURI in pixel_mcp.json
 
 import { createHashRouter, Navigate, RouterProvider } from "react-router-dom";
+import { DebugComparisonPage } from "./DebugComparisonPage";
 import { ErrorPage } from "./ErrorPage";
 import { HomePage } from "./HomePage";
 import { InitializedLayout } from "./layouts";
@@ -28,6 +29,10 @@ const router = createHashRouter([
 			//     path: '/your-route',
 			//     Component: YourPage,
 			// },
+			{
+				path: '/debug-comparison',
+				Component: DebugComparisonPage,
+			},
 			{
 				// Catch-all: redirect unknown routes to home
 				path: "*",

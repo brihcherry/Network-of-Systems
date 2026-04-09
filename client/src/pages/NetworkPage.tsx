@@ -250,7 +250,7 @@ export const NetworkPage = () => {
 	// ── Selection screen ──────────────────────────────────────────────────────
 	if (!selectedDataObject) {
 		return (
-			<div className="flex flex-col h-full -m-4">
+			<div className="flex flex-col h-full">
 				<header className="shrink-0 border-b border-gray-200 bg-white px-6 py-3">
 					<h1 className="text-lg font-semibold text-gray-900">
 						Network of Systems
@@ -318,7 +318,7 @@ export const NetworkPage = () => {
 
 	// ── Graph view (after selection) ──────────────────────────────────────────
 	return (
-		<div className="flex flex-col h-full -m-4">
+		<div className="flex flex-col h-full">
 			<header className="shrink-0 border-b border-gray-200 bg-white px-6 py-3 flex items-center gap-4">
 				<button
 					type="button"

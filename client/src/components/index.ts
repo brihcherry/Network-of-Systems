@@ -4,3 +4,4 @@ export * from "./GraphTooltip";
 export * from "./GraphLegend";
 export * from "./GraphSidebar";
 export * from "./LoadingScreen";
+export * from "./MainNavigation";
