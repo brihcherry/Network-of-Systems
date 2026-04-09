@@ -35,6 +35,14 @@ export const NetworkPage = () => {
 	const [graphError, setGraphError] = useState<string | null>(null);
 	const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 	const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("none");
+	const [latencySliderMinutes, setLatencySliderMinutes] = useState(60_000);
+	
+	// Latency analysis: single-call caching pattern matching legacy DataLatencyPerformer.
+	// Reactor computes ALL edge scores in one call (fixed 1000h threshold), returns grouped result.
+	// Frontend caches the result and filters by slider value client-side on each movement.
+	const [latencyCachedResult, setLatencyCachedResult] = useState<Record<string, any> | null>(null);
+	const [isLoadingLatency, setIsLoadingLatency] = useState(false);
+	const [latencyHighlight, setLatencyHighlight] = useState<HighlightSet | null>(null);
 
 	// ── Phase 1: Fetch DataObject list on mount ──────────────────────────────
 	useEffect(() => {
@@ -123,13 +131,104 @@ export const NetworkPage = () => {
 				return loopResult;
 			case "islands":
 				return islandResult;
+			case "latency":
+				return latencyHighlight;
 			default:
 				return null;
 		}
-	}, [analysisMode, loopResult, islandResult]);
+	}, [analysisMode, loopResult, islandResult, latencyHighlight]);
+
+	// ── Phase 3a: Fetch latency result ONCE when entering latency analysis mode ───────────
+	// Reactor computes all scores at fixed 1000h threshold. Frontend caches and filters.
+	useEffect(() => {
+		if (
+			analysisMode !== "latency"
+			|| !insightId
+			|| !selectedDataObject
+			|| !graphData
+		) {
+			setLatencyCachedResult(null);
+			return;
+		}
+
+		let cancelled = false;
+		// Single call: no thresholdHours parameter. Reactor uses fixed 1000h and returns all scores.
+		// selectedNodeUri omitted here to match legacy pattern (all roots, no specific node selected).
+		const pixel = `RunDataLatencyAnalysis(database=["${DATABASE_ID}"], dataObject=["${selectedDataObject.uri}"]);`;
+
+		setIsLoadingLatency(true);
+
+		runPixel(pixel, insightId)
+			.then((response) => {
+				if (cancelled) return;
+				if (response.errors.length > 0) {
+					console.error("Latency analysis error:", response.errors);
+					setLatencyCachedResult(null);
+					return;
+				}
+				const output = response.pixelReturn[0]?.output as Record<string, any>;
+				if (output) {
+					// Cache the full grouped result (e.g., { "24.0": [...], "168.0": [...], "0.0": [...] })
+					setLatencyCachedResult(output);
+				}
+			})
+			.catch((err) => {
+				if (!cancelled) {
+					console.error("Failed to fetch latency data:", err);
+					setLatencyCachedResult(null);
+				}
+			})
+			.finally(() => {
+				if (!cancelled) setIsLoadingLatency(false);
+			});
+
+		return () => { cancelled = true; };
+	}, [analysisMode, insightId, selectedDataObject, graphData]);
+
+	// ── Phase 3b: Filter cached latency result based on slider value ──────────────────────
+	// As user moves slider, client-side code selects which score buckets to highlight.
+	// Avoids repeated backend calls; matches legacy UI pattern.
+	useEffect(() => {
+		if (analysisMode !== "latency" || !latencyCachedResult) {
+			setLatencyHighlight(null);
+			return;
+		}
+
+		// slider is in minutes (e.g., 60000 = 1000 hours)
+		const thresholdHours = latencySliderMinutes / 60;
+
+		// Collect nodes and edges whose score is <= threshold.
+		const nodeIds = new Set<string>();
+		const edgeIds = new Set<string>();
+
+		// Iterate over score buckets (keys are string representations like "24.0", "168.0", "0.0")
+		Object.entries(latencyCachedResult).forEach(([scoreKey, edgeList]) => {
+			// Skip metadata and non-edge entries
+			if (scoreKey.startsWith("_") || !Array.isArray(edgeList)) {
+				return;
+			}
+
+			const score = parseFloat(scoreKey);
+			if (!isNaN(score) && score <= thresholdHours) {
+				(edgeList as Array<{ uri: string; source: string; target: string }>).forEach(
+					(edge) => {
+						edgeIds.add(edge.uri);
+						if (edge.source) nodeIds.add(edge.source);
+						if (edge.target) nodeIds.add(edge.target);
+					},
+				);
+			}
+		});
+
+		setLatencyHighlight({ nodeIds, edgeIds });
+	}, [analysisMode, latencyCachedResult, latencySliderMinutes]);
 
 	const handleModeChange = useCallback((mode: AnalysisMode) => {
 		setAnalysisMode(mode);
+		if (mode !== "latency") {
+			setLatencyHighlight(null);
+			setLatencyCachedResult(null); // Clear cached latency data when exiting latency mode
+		}
 	}, []);
 
 	const handleSelect = useCallback((uri: string) => {
@@ -143,6 +242,8 @@ export const NetworkPage = () => {
 	const handleBack = useCallback(() => {
 		setSelectedDataObject(null);
 		setAnalysisMode("none");
+		setLatencyHighlight(null);
+		setLatencyCachedResult(null); // Clear cached latency data
 		setTooltip(null);
 	}, []);
 
@@ -273,6 +374,10 @@ export const NetworkPage = () => {
 						onModeChange={handleModeChange}
 						loopCount={loopResult?.nodeIds.size ?? 0}
 						islandCount={islandResult?.nodeIds.size ?? 0}
+						latencyMinutes={latencySliderMinutes}
+						onLatencyMinutesChange={setLatencySliderMinutes}
+						latencyNodeCount={latencyHighlight?.nodeIds.size ?? 0}
+						isLoadingLatency={isLoadingLatency}
 					/>
 
 					<main className="flex-1 relative overflow-hidden">
