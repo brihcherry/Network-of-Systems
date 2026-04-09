@@ -1,6 +1,6 @@
 // NetworkPage.tsx — Full-screen page that renders the network of systems graph.
 // Phase 1: fetch DataObject list from backend → show dropdown.
-// Phase 2: once a DataObject is selected → render graph from static JSON.
+// Phase 2: once a DataObject is selected → fetch graph via reactor → render.
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { runPixel } from "@semoss/sdk";
@@ -9,9 +9,9 @@ import { NetworkGraph } from "@/components/NetworkGraph";
 import { GraphTooltip } from "@/components/GraphTooltip";
 import { GraphLegend } from "@/components/GraphLegend";
 import { GraphSidebar, type AnalysisMode } from "@/components/GraphSidebar";
-import { getGraphData } from "@/lib/graphData";
+import { getGraphData, type GraphDataResult } from "@/lib/graphData";
 import { findLoops, findIslands, type HighlightSet } from "@/lib/graphAnalysis";
-import type { TooltipData } from "@/types/graph";
+import type { TooltipData, RawGraphData } from "@/types/graph";
 
 const DATABASE_ID = "133db94b-4371-4763-bff9-edf7e5ed021b";
 
@@ -29,11 +29,14 @@ export const NetworkPage = () => {
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const [selectedDataObject, setSelectedDataObject] = useState<DataObjectOption | null>(null);
 
-	// Graph state (only computed when a DataObject is selected)
+	// Graph state
+	const [graphData, setGraphData] = useState<GraphDataResult | null>(null);
+	const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+	const [graphError, setGraphError] = useState<string | null>(null);
 	const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 	const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("none");
 
-	// Fetch available DataObjects from the backend on mount
+	// ── Phase 1: Fetch DataObject list on mount ──────────────────────────────
 	useEffect(() => {
 		if (!insightId) return;
 
@@ -67,11 +70,42 @@ export const NetworkPage = () => {
 		return () => { cancelled = true; };
 	}, [insightId]);
 
-	// Load static graph data once a DataObject is selected
-	const graphData = useMemo(
-		() => (selectedDataObject ? getGraphData() : null),
-		[selectedDataObject],
-	);
+	// ── Phase 2: Fetch graph data when a DataObject is selected ──────────────
+	useEffect(() => {
+		if (!insightId || !selectedDataObject) return;
+
+		let cancelled = false;
+		const pixel = `GetGraphForDataObject(database=["${DATABASE_ID}"], dataObject=["${selectedDataObject.uri}"]);`;
+
+		setIsLoadingGraph(true);
+		setGraphError(null);
+		setGraphData(null);
+
+		runPixel(pixel, insightId)
+			.then((response) => {
+				if (cancelled) return;
+				if (response.errors.length > 0) {
+					setGraphError(response.errors.join(", "));
+					return;
+				}
+				const output = response.pixelReturn[0]?.output as RawGraphData;
+				if (output && output.nodes && output.edges) {
+					setGraphData(getGraphData(output));
+				} else {
+					setGraphError("Unexpected response format from server");
+				}
+			})
+			.catch((err) => {
+				if (!cancelled) {
+					setGraphError(err instanceof Error ? err.message : "Failed to load graph");
+				}
+			})
+			.finally(() => {
+				if (!cancelled) setIsLoadingGraph(false);
+			});
+
+		return () => { cancelled = true; };
+	}, [insightId, selectedDataObject]);
 
 	const loopResult = useMemo(
 		() => (graphData ? findLoops(graphData.nodes, graphData.edges) : null),
@@ -194,35 +228,65 @@ export const NetworkPage = () => {
 				</button>
 				<div>
 					<h1 className="text-lg font-semibold text-gray-900">
-						{graphData!.title}
+						{graphData?.title ?? "Network of Systems"}
 					</h1>
 					<p className="text-sm text-gray-500 mt-0.5">
-						{selectedDataObject.label} &middot;{" "}
-						{graphData!.nodes.length} systems &middot;{" "}
-						{graphData!.edges.length} interfaces
+						{selectedDataObject.label}
+						{graphData && (
+							<>
+								{" "}&middot; {graphData.nodes.length} systems
+								{" "}&middot; {graphData.edges.length} interfaces
+							</>
+						)}
 					</p>
 				</div>
 			</header>
 
-			<div className="flex-1 flex overflow-hidden">
-				<GraphSidebar
-					activeMode={analysisMode}
-					onModeChange={handleModeChange}
-					loopCount={loopResult!.nodeIds.size}
-					islandCount={islandResult!.nodeIds.size}
-				/>
+			{isLoadingGraph && (
+				<div className="flex-1 flex items-center justify-center bg-gray-50">
+					<div className="text-center">
+						<div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600" />
+						<p className="mt-3 text-sm text-gray-500">
+							Loading network graph…
+						</p>
+					</div>
+				</div>
+			)}
 
-				<main className="flex-1 relative overflow-hidden">
-					<NetworkGraph
-						nodes={graphData!.nodes}
-						edges={graphData!.edges}
-						onTooltipChange={setTooltip}
-						highlightSet={highlightSet}
+			{graphError && (
+				<div className="flex-1 flex items-center justify-center bg-gray-50">
+					<div className="w-full max-w-md px-6">
+						<div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+							<p className="text-sm font-medium text-red-800">
+								Failed to load graph
+							</p>
+							<p className="mt-1 text-xs text-red-600">{graphError}</p>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{graphData && !isLoadingGraph && !graphError && (
+				<div className="flex-1 flex overflow-hidden">
+					<GraphSidebar
+						activeMode={analysisMode}
+						onModeChange={handleModeChange}
+						loopCount={loopResult?.nodeIds.size ?? 0}
+						islandCount={islandResult?.nodeIds.size ?? 0}
 					/>
-					<GraphLegend entries={graphData!.legend} />
-					<GraphTooltip tooltip={tooltip} />
-				</main>
-			</div>
+
+					<main className="flex-1 relative overflow-hidden">
+						<NetworkGraph
+							nodes={graphData.nodes}
+							edges={graphData.edges}
+							onTooltipChange={setTooltip}
+							highlightSet={highlightSet}
+						/>
+						<GraphLegend entries={graphData.legend} />
+						<GraphTooltip tooltip={tooltip} />
+					</main>
+				</div>
+			)}
 		</div>
 	);
 };

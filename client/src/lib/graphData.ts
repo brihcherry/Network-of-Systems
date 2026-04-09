@@ -1,15 +1,12 @@
-// Loads and transforms admissions_data.json into processed nodes and edges
-// ready for D3 force simulation.
+// Transforms raw graph data (from reactor or static JSON) into processed
+// nodes and edges ready for D3 force simulation.
 
-import rawData from "@/data/admissions_data.json";
 import type {
 	RawGraphData,
 	ProcessedNode,
 	ProcessedEdge,
 	LegendEntry,
 } from "@/types/graph";
-
-const data = rawData as unknown as RawGraphData;
 
 /** Extract a clean string from a propHash value, stripping wrapping quotes. */
 function cleanPropString(value: unknown): string {
@@ -46,8 +43,8 @@ export interface GraphDataResult {
 	title: string;
 }
 
-/** Process raw JSON data into the graph structures needed for rendering. */
-export function getGraphData(): GraphDataResult {
+/** Process raw graph data into the structures needed for rendering. */
+export function getGraphData(data: RawGraphData): GraphDataResult {
 	// Build node map from the nodes object (keyed by URI)
 	const nodeMap = new Map<string, ProcessedNode>();
 	const typeCounts = new Map<string, { color: string; count: number }>();
