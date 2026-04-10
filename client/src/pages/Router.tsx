@@ -12,6 +12,7 @@ import { createHashRouter, Navigate, RouterProvider } from "react-router-dom";
 import { DebugComparisonPage } from "./DebugComparisonPage";
 import { ErrorPage } from "./ErrorPage";
 import { HomePage } from "./HomePage";
+import { NetworkStraightPage } from "./NetworkStraightPage";
 import { InitializedLayout } from "./layouts";
 
 const router = createHashRouter([
@@ -32,6 +33,10 @@ const router = createHashRouter([
 			{
 				path: '/debug-comparison',
 				Component: DebugComparisonPage,
+			},
+			{
+				path: '/network-v2',
+				Component: NetworkStraightPage,
 			},
 			{
 				// Catch-all: redirect unknown routes to home

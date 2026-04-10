@@ -3,6 +3,7 @@ import { SemossBlueLogo } from "@/assets";
 
 const navigationLinks: { path: string; text: string }[] = [
 	{ path: "/", text: "Network of Systems" },
+	{ path: "/network-v2", text: "Network of Systems V2" },
 	{ path: "/debug-comparison", text: "Debug Comparison" },
 ];
 

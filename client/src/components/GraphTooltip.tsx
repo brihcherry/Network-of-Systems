@@ -47,34 +47,52 @@ export const GraphTooltip = ({ tooltip }: GraphTooltipProps) => {
 					<div className="text-gray-400 text-[10px] uppercase tracking-wide mt-1">
 						{tooltip.edge.edgeType}
 					</div>
-					{tooltip.edge.data && (
-						<div className="mt-1">
-							<span className="text-gray-400">Data:</span>{" "}
-							<span className="text-yellow-300">{tooltip.edge.data}</span>
-						</div>
-					)}
-					{tooltip.edge.format && (
-						<div>
-							<span className="text-gray-400">Format:</span>{" "}
-							{tooltip.edge.format}
-						</div>
-					)}
-					{tooltip.edge.protocol && (
-						<div>
-							<span className="text-gray-400">Protocol:</span>{" "}
-							{tooltip.edge.protocol}
-						</div>
-					)}
-					{tooltip.edge.frequency && (
-						<div>
-							<span className="text-gray-400">Frequency:</span>{" "}
-							{tooltip.edge.frequency}
-						</div>
-					)}
-					{tooltip.edge.interfaceName && (
-						<div className="text-gray-400 mt-1 italic text-[10px]">
-							{tooltip.edge.interfaceName}
-						</div>
+					<div className="mt-1">
+						<span className="text-gray-400">Data:</span>{" "}
+						<span className="text-yellow-300">{tooltip.edge.data || "N/A"}</span>
+					</div>
+					<div>
+						<span className="text-gray-400">Format:</span>{" "}
+						{tooltip.edge.format || "N/A"}
+					</div>
+					<div>
+						<span className="text-gray-400">Protocol:</span>{" "}
+						{tooltip.edge.protocol || "N/A"}
+					</div>
+					<div>
+						<span className="text-gray-400">Frequency:</span>{" "}
+						{tooltip.edge.frequency || "N/A"}
+					</div>
+					<div className="text-gray-400 mt-1 italic text-[10px]">
+						{tooltip.edge.interfaceName || "N/A"}
+					</div>
+
+					{/* Reverse direction (bidirectional edges on V2 page only) */}
+					{tooltip.edge.bidirectional && tooltip.edge.reverseEdgeData && (
+						<>
+							<div className="border-t border-gray-600 mt-2 pt-2 text-gray-400 text-[10px] uppercase tracking-wide">
+								{tooltip.targetLabel} → {tooltip.sourceLabel}
+							</div>
+							<div className="mt-1">
+								<span className="text-gray-400">Data:</span>{" "}
+								<span className="text-yellow-300">{tooltip.edge.reverseEdgeData.data || "N/A"}</span>
+							</div>
+							<div>
+								<span className="text-gray-400">Format:</span>{" "}
+								{tooltip.edge.reverseEdgeData.format || "N/A"}
+							</div>
+							<div>
+								<span className="text-gray-400">Protocol:</span>{" "}
+								{tooltip.edge.reverseEdgeData.protocol || "N/A"}
+							</div>
+							<div>
+								<span className="text-gray-400">Frequency:</span>{" "}
+								{tooltip.edge.reverseEdgeData.frequency || "N/A"}
+							</div>
+							<div className="text-gray-400 mt-1 italic text-[10px]">
+								{tooltip.edge.reverseEdgeData.interfaceName || "N/A"}
+							</div>
+						</>
 					)}
 				</>
 			)}

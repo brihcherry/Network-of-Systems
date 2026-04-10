@@ -11,6 +11,10 @@ interface NetworkGraphProps {
 	edges: ProcessedEdge[];
 	onTooltipChange: (tooltip: TooltipData | null) => void;
 	highlightSet?: HighlightSet | null;
+	/** Perpendicular bow distance for edges (px). 0 = straight lines. Default: 30. */
+	curveOffset?: number;
+	/** Merge A→B + B→A pairs into a single double-headed edge. Default: false. */
+	mergeBidirectional?: boolean;
 }
 
 // Force layout parameters (matching legacy force-graph defaults)
@@ -26,6 +30,8 @@ export const NetworkGraph = ({
 	edges,
 	onTooltipChange,
 	highlightSet,
+	curveOffset = 30,
+	mergeBidirectional = false,
 }: NetworkGraphProps) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
@@ -62,8 +68,44 @@ export const NetworkGraph = ({
 		}
 		nodeLabelMap.current = labelMap;
 
-		// Arrow marker definition
+		// Merge bidirectional edge pairs (A→B + B→A) into a single double-headed edge.
+		// Uses a canonical pair key so order doesn't matter. The first-seen edge is kept;
+		// its bidirectional flag is set to true when the reverse is found.
+		const pairKey = (a: string, b: string) => (a < b ? `${a}||${b}` : `${b}||${a}`);
+		let workingEdges: ProcessedEdge[];
+		if (mergeBidirectional) {
+			const seen = new Map<string, ProcessedEdge>();
+			const result: ProcessedEdge[] = [];
+			for (const edge of edges) {
+				const key = pairKey(edge.sourceId, edge.targetId);
+				if (seen.has(key)) {
+					const kept = seen.get(key)!;
+					kept.bidirectional = true;
+					// Store the reverse edge's metadata so the tooltip can show both directions.
+					// The kept edge's source→target is one direction; the dropped edge's source
+					// is the reverse direction (target→source from the kept edge's perspective).
+					kept.reverseEdgeData = {
+						edgeType: edge.edgeType,
+						data: edge.data,
+						format: edge.format,
+						protocol: edge.protocol,
+						frequency: edge.frequency,
+						interfaceName: edge.interfaceName,
+					};
+				} else {
+					edge.bidirectional = false; // reset in case of re-init
+					seen.set(key, edge);
+					result.push(edge);
+				}
+			}
+			workingEdges = result;
+		} else {
+			workingEdges = edges;
+		}
+
+		// Arrow marker definitions
 		const defs = svg.append("defs");
+		// End arrowhead (all edges)
 		defs.append("marker")
 			.attr("id", "arrowhead")
 			.attr("viewBox", "0 -5 10 10")
@@ -75,14 +117,19 @@ export const NetworkGraph = ({
 			.append("path")
 			.attr("d", "M0,-5L10,0L0,5")
 			.attr("fill", "#999");
-
-		// Pre-compute curve offsets for bidirectional edge detection.
-		// Every edge gets the same curve offset from the perspective of its
-		// flow direction (source → target). When viewed from source to target,
-		// the edge always bows to the same side. For bidirectional pairs (A→B
-		// and B→A), since they face opposite directions the curves naturally
-		// separate to opposite sides without any special detection.
-		const CURVE_OFFSET = 30;
+		// Start arrowhead (bidirectional edges only) — auto-start-reverse mirrors the
+		// end marker so it points FROM the target back TOWARD the source.
+		defs.append("marker")
+			.attr("id", "arrowhead-start")
+			.attr("viewBox", "0 -5 10 10")
+			.attr("refX", NODE_RADIUS + 10)
+			.attr("refY", 0)
+			.attr("markerWidth", 6)
+			.attr("markerHeight", 6)
+			.attr("orient", "auto-start-reverse")
+			.append("path")
+			.attr("d", "M0,-5L10,0L0,5")
+			.attr("fill", "#999");
 
 		// Zoom group
 		const g = svg.append("g");
@@ -101,13 +148,14 @@ export const NetworkGraph = ({
 			.append("g")
 			.attr("class", "links")
 			.selectAll("path")
-			.data(edges)
+			.data(workingEdges)
 			.join("path")
 			.attr("fill", "none")
 			.attr("stroke", "#999")
 			.attr("stroke-opacity", 0.6)
 			.attr("stroke-width", 1.5)
 			.attr("marker-end", "url(#arrowhead)")
+			.attr("marker-start", (d) => (d.bidirectional ? "url(#arrowhead-start)" : null))
 			.on("mouseenter", (event: MouseEvent, d: ProcessedEdge) => {
 				onTooltipChangeRef.current({
 					x: event.clientX + 12,
@@ -214,7 +262,7 @@ export const NetworkGraph = ({
 			.force(
 				"link",
 				d3
-					.forceLink<ProcessedNode, ProcessedEdge>(edges)
+					.forceLink<ProcessedNode, ProcessedEdge>(workingEdges)
 					.id((d) => d.id)
 					.distance(LINK_DISTANCE),
 			)
@@ -240,8 +288,8 @@ export const NetworkGraph = ({
 					// Perpendicular unit vector
 					const px = -dy / len;
 					const py = dx / len;
-					const cx = mx + px * CURVE_OFFSET;
-					const cy = my + py * CURVE_OFFSET;
+const cx = mx + px * curveOffset;
+				const cy = my + py * curveOffset;
 
 					return `M ${sx},${sy} Q ${cx},${cy} ${tx},${ty}`;
 				});
@@ -268,7 +316,7 @@ export const NetworkGraph = ({
 					d3.zoomIdentity.translate(tx, ty).scale(scale),
 				);
 		});
-	}, [nodes, edges]);
+	}, [nodes, edges, curveOffset, mergeBidirectional]);
 
 	useEffect(() => {
 		initGraph();

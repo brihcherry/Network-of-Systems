@@ -20,8 +20,16 @@ interface DataObjectOption {
 	label: string;
 }
 
-export const NetworkPage = () => {
+interface NetworkPageProps {
+	/** Controls edge rendering style. Default: "curved" (bowed arcs, separate per direction). */
+	edgeStyle?: "curved" | "straight-bidir";
+}
+
+export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 	const { insightId } = useInsight();
+
+	const curveOffset = edgeStyle === "straight-bidir" ? 0 : 30;
+	const mergeBidirectional = edgeStyle === "straight-bidir";
 
 	// Dropdown state
 	const [dataObjects, setDataObjects] = useState<DataObjectOption[]>([]);
@@ -386,6 +394,8 @@ export const NetworkPage = () => {
 							edges={graphData.edges}
 							onTooltipChange={setTooltip}
 							highlightSet={highlightSet}
+							curveOffset={curveOffset}
+							mergeBidirectional={mergeBidirectional}
 						/>
 						<GraphLegend entries={graphData.legend} />
 						<GraphTooltip tooltip={tooltip} />

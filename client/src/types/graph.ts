@@ -49,6 +49,17 @@ export interface ProcessedEdge extends d3.SimulationLinkDatum<ProcessedNode> {
 	protocol: string;
 	frequency: string;
 	interfaceName: string;
+	/** Set by NetworkGraph when mergeBidirectional=true: two opposite edges merged into one. */
+	bidirectional?: boolean;
+	/** Metadata from the reverse edge (target→source) when bidirectional=true. */
+	reverseEdgeData?: {
+		edgeType: string;
+		data: string;
+		format: string;
+		protocol: string;
+		frequency: string;
+		interfaceName: string;
+	};
 }
 
 /** Tooltip data for hover display. */
