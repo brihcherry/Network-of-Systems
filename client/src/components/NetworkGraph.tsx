@@ -242,11 +242,12 @@ export const NetworkGraph = ({
 				onNodeClick?.(d.id);
 			});
 
-		// Drag behavior
+		// Drag behavior — always enabled, but simulation pauses when locked
 		const drag = d3
 			.drag<SVGGElement, ProcessedNode>()
-			.filter(() => !isInteractionLocked)
 			.on("start", (event, d) => {
+				// When dragging starts, pause simulation to keep nodes in place
+				// (unless already paused by lock)
 				if (!event.active) simulation.alphaTarget(0.3).restart();
 				d.fx = d.x;
 				d.fy = d.y;
@@ -258,13 +259,17 @@ export const NetworkGraph = ({
 			})
 			.on("end", (event, d) => {
 				if (!event.active) simulation.alphaTarget(0);
-				d.fx = null;
-				d.fy = null;
+				// In locked mode, keep node fixed at dropped position
+				// In unlocked mode, release node to physics forces
+				if (!isInteractionLocked) {
+					d.fx = null;
+					d.fy = null;
+				}
 				d3.select(event.sourceEvent.currentTarget).attr("cursor", "grab");
 			});
 
 		nodeGroup
-			.attr("cursor", isInteractionLocked ? "default" : "grab")
+			.attr("cursor", "grab")
 			.call(drag);
 
 		// Force simulation
@@ -350,6 +355,22 @@ const cx = mx + px * curveOffset;
 			}
 		};
 	}, [initGraph]);
+
+	// When lock state changes, pause or resume the simulation
+	// Locked = no physics forces (nodes frozen but still draggable)
+	// Unlocked = physics forces enabled (liquid-like motion)
+	useEffect(() => {
+		const simulation = simulationRef.current;
+		if (!simulation) return;
+
+		if (isInteractionLocked) {
+			// Pause simulation — stops physics forces so nodes don't drift
+			simulation.stop();
+		} else {
+			// Resume simulation — enables physics forces for free movement
+			simulation.restart();
+		}
+	}, [isInteractionLocked]);
 
 	// Apply or remove highlighting when highlightSet changes — without
 	// re-initializing the simulation or the graph layout.
