@@ -8,6 +8,7 @@ import type { ProcessedNode, ProcessedEdge } from "@/types/graph";
 export interface HighlightSet {
 	nodeIds: Set<string>;
 	edgeIds: Set<string>;
+	reverseEdgeIds?: Set<string>; // edges that match the opposite direction (for bidirectional highlighting)
 }
 
 /**
@@ -189,4 +190,108 @@ export function findIslands(
 	}
 
 	return { nodeIds: islandNodeIds, edgeIds: islandEdgeIds };
+}
+
+/**
+ * Get connections expanding N levels from a selected node in a given direction.
+ * Progressive exploration: depth=0 → direct connections, depth=1 → next level out, etc.
+ * Handles bidirectional edges by tracking reverse-direction edges separately.
+ * @param selectedNode - starting node ID
+ * @param mode - "adjacent" (both directions), "upstream" (incoming), or "downstream" (outgoing)
+ * @param edges - all edges in the graph
+ * @param depth - how many levels to expand (0 = direct only, 1 = direct + their connections, etc.)
+ */
+export function getConnectionsAtDepth(
+	selectedNode: string,
+	mode: "adjacent" | "upstream" | "downstream",
+	edges: ProcessedEdge[],
+	dataObjectNodeIds: Set<string>,
+	depth: number,
+): HighlightSet {
+	const nodeIds = new Set<string>();
+	const edgeIds = new Set<string>();
+	const reverseEdgeIds = new Set<string>(); // edges that match opposite direction
+
+	// Always include the selected node
+	nodeIds.add(selectedNode);
+
+	// Start with the selected node as the frontier
+	let frontier = new Set<string>([selectedNode]);
+
+	// For each depth level
+	for (let level = 0; level <= depth; level++) {
+		const nextFrontier = new Set<string>();
+
+		// Find all edges from/to nodes in current frontier
+		for (const edge of edges) {
+			const sourceId = edge.sourceId;
+			const targetId = edge.targetId;
+			const edgeType = (edge.edgeType || "").toLowerCase();
+
+			// DataObject connections are treated as outward-only.
+			// Ignore any edge that points INTO a DataObject (System -> DataObject).
+			if (dataObjectNodeIds.has(targetId) && !dataObjectNodeIds.has(sourceId)) {
+				continue;
+			}
+
+			let isMatch = false;
+			let isReverse = false;
+			let fromFrontier = false;
+			let connectedNode: string | null = null;
+
+			if (mode === "adjacent") {
+				// Both directions
+				if (frontier.has(sourceId)) {
+					isMatch = true;
+					fromFrontier = true;
+					connectedNode = targetId;
+				} else if (frontier.has(targetId)) {
+					isMatch = true;
+					fromFrontier = true;
+					connectedNode = sourceId;
+				}
+			} else if (mode === "upstream") {
+				// Incoming Provide only: frontier node is the target
+				if (edgeType === "provide" && frontier.has(targetId)) {
+					isMatch = true;
+					fromFrontier = true;
+					connectedNode = sourceId;
+				} else if (edgeType === "provide" && frontier.has(sourceId)) {
+					// Reverse direction: frontier node is source, but edge goes the opposite way
+					isReverse = true;
+				}
+			} else if (mode === "downstream") {
+				// Outgoing Provide/Relation only: frontier node is the source
+				const isAllowedDownstreamType = edgeType === "provide" || edgeType === "relation";
+				if (isAllowedDownstreamType && frontier.has(sourceId)) {
+					isMatch = true;
+					fromFrontier = true;
+					connectedNode = targetId;
+				} else if (isAllowedDownstreamType && frontier.has(targetId)) {
+					// Reverse direction: frontier node is target, but edge goes the opposite way
+					isReverse = true;
+				}
+			}
+
+			// If edge matches current frontier, mark it and add connected node to next frontier
+			if (isMatch && fromFrontier && connectedNode !== null) {
+				edgeIds.add(edge.id);
+				nodeIds.add(connectedNode);
+				nextFrontier.add(connectedNode);
+			}
+
+			// If edge matches reverse direction (bidirectional case), mark it separately
+			if (isReverse) {
+				reverseEdgeIds.add(edge.id);
+			}
+		}
+
+		// Move to next level
+		frontier = nextFrontier;
+
+		// Stop if no new frontier nodes
+		if (frontier.size === 0) break;
+	}
+
+	return { nodeIds, edgeIds, reverseEdgeIds: reverseEdgeIds.size > 0 ? reverseEdgeIds : undefined };
 }

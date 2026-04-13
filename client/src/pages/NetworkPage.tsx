@@ -8,9 +8,9 @@ import { useInsight } from "@semoss/sdk/react";
 import { NetworkGraph } from "@/components/NetworkGraph";
 import { GraphTooltip } from "@/components/GraphTooltip";
 import { GraphLegend } from "@/components/GraphLegend";
-import { GraphSidebar, type AnalysisMode } from "@/components/GraphSidebar";
+import { GraphSidebar, type AnalysisMode, type ConnectionMode } from "@/components/GraphSidebar";
 import { getGraphData, type GraphDataResult } from "@/lib/graphData";
-import { findLoops, findIslands, type HighlightSet } from "@/lib/graphAnalysis";
+import { findLoops, findIslands, type HighlightSet, getConnectionsAtDepth } from "@/lib/graphAnalysis";
 import type { TooltipData, RawGraphData } from "@/types/graph";
 
 const DATABASE_ID = "133db94b-4371-4763-bff9-edf7e5ed021b";
@@ -43,7 +43,11 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 	const [graphError, setGraphError] = useState<string | null>(null);
 	const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 	const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("none");
+	const [isGraphLocked, setIsGraphLocked] = useState(false);
 	const [latencySliderMinutes, setLatencySliderMinutes] = useState(60_000);
+	const [selectedNode, setSelectedNode] = useState<string | null>(null);
+	const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
+	const [connectionDepth, setConnectionDepth] = useState(0);
 	
 	// Latency analysis: single-call caching pattern matching legacy DataLatencyPerformer.
 	// Reactor computes ALL edge scores in one call (fixed 1000h threshold), returns grouped result.
@@ -131,6 +135,10 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 		() => (graphData ? findIslands(graphData.nodes, graphData.edges) : null),
 		[graphData],
 	);
+	const dataObjectNodeIds = useMemo(() => {
+		if (!graphData) return new Set<string>();
+		return new Set(graphData.nodes.filter((node) => node.type === "DataObject").map((node) => node.id));
+	}, [graphData]);
 
 	const highlightSet: HighlightSet | null = useMemo(() => {
 		if (!loopResult || !islandResult) return null;
@@ -141,10 +149,43 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 				return islandResult;
 			case "latency":
 				return latencyHighlight;
+			case "connections": {
+				if (!selectedNode || !connectionMode || !graphData) return null;
+				return getConnectionsAtDepth(
+					selectedNode,
+					connectionMode,
+					graphData.edges,
+					dataObjectNodeIds,
+					connectionDepth,
+				);
+			}
 			default:
 				return null;
 		}
-	}, [analysisMode, loopResult, islandResult, latencyHighlight]);
+	}, [analysisMode, loopResult, islandResult, latencyHighlight, selectedNode, connectionMode, connectionDepth, graphData, dataObjectNodeIds]);
+
+	// Check if we can expand connections further
+	const canExpandConnections = useMemo(() => {
+		if (analysisMode !== "connections" || !selectedNode || !connectionMode || !graphData) {
+			return false;
+		}
+		const currentHighlight = getConnectionsAtDepth(
+			selectedNode,
+			connectionMode,
+			graphData.edges,
+			dataObjectNodeIds,
+			connectionDepth,
+		);
+		const nextHighlight = getConnectionsAtDepth(
+			selectedNode,
+			connectionMode,
+			graphData.edges,
+			dataObjectNodeIds,
+			connectionDepth + 1,
+		);
+		// Can expand if the next level would have more nodes than current
+		return nextHighlight.nodeIds.size > currentHighlight.nodeIds.size;
+	}, [analysisMode, selectedNode, connectionMode, connectionDepth, graphData, dataObjectNodeIds]);
 
 	// ── Phase 3a: Fetch latency result ONCE when entering latency analysis mode ───────────
 	// Reactor computes all scores at fixed 1000h threshold. Frontend caches and filters.
@@ -250,9 +291,34 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 	const handleBack = useCallback(() => {
 		setSelectedDataObject(null);
 		setAnalysisMode("none");
+		setIsGraphLocked(false);
 		setLatencyHighlight(null);
 		setLatencyCachedResult(null); // Clear cached latency data
 		setTooltip(null);
+		setSelectedNode(null);
+		setConnectionMode(null);
+		setConnectionDepth(0);
+	}, []);
+
+	const handleNodeClick = useCallback((nodeId: string) => {
+		setSelectedNode(nodeId);
+		setConnectionMode(null); // Reset connection mode when selecting a new node
+		setConnectionDepth(0); // Reset depth when selecting a new node
+	}, []);
+
+	const handleNodeDeselect = useCallback(() => {
+		setSelectedNode(null);
+		setConnectionMode(null);
+		setConnectionDepth(0);
+	}, []);
+
+	const handleConnectionModeChange = useCallback((mode: ConnectionMode | null) => {
+		setConnectionMode(mode);
+		setConnectionDepth(0); // Reset depth when changing mode
+	}, []);
+
+	const handleExpandConnections = useCallback(() => {
+		setConnectionDepth((prev) => prev + 1);
 	}, []);
 
 	// ── Selection screen ──────────────────────────────────────────────────────
@@ -380,6 +446,16 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 					<GraphSidebar
 						activeMode={analysisMode}
 						onModeChange={handleModeChange}
+						isGraphLocked={isGraphLocked}
+						onLockGraph={() => setIsGraphLocked(true)}
+						onUnlockGraph={() => setIsGraphLocked(false)}
+						selectedNode={selectedNode}
+						onNodeDeselect={handleNodeDeselect}
+						connectionMode={connectionMode}
+						onConnectionModeChange={handleConnectionModeChange}
+						connectionDepth={connectionDepth}
+						onExpandConnections={handleExpandConnections}
+						canExpandConnections={canExpandConnections}
 						loopCount={loopResult?.nodeIds.size ?? 0}
 						islandCount={islandResult?.nodeIds.size ?? 0}
 						latencyMinutes={latencySliderMinutes}
@@ -393,7 +469,9 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 							nodes={graphData.nodes}
 							edges={graphData.edges}
 							onTooltipChange={setTooltip}
+							onNodeClick={handleNodeClick}
 							highlightSet={highlightSet}
+							isInteractionLocked={isGraphLocked}
 							curveOffset={curveOffset}
 							mergeBidirectional={mergeBidirectional}
 						/>

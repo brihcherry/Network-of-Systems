@@ -10,7 +10,9 @@ interface NetworkGraphProps {
 	nodes: ProcessedNode[];
 	edges: ProcessedEdge[];
 	onTooltipChange: (tooltip: TooltipData | null) => void;
+	onNodeClick?: (nodeId: string) => void;
 	highlightSet?: HighlightSet | null;
+	isInteractionLocked?: boolean;
 	/** Perpendicular bow distance for edges (px). 0 = straight lines. Default: 30. */
 	curveOffset?: number;
 	/** Merge A→B + B→A pairs into a single double-headed edge. Default: false. */
@@ -29,7 +31,9 @@ export const NetworkGraph = ({
 	nodes,
 	edges,
 	onTooltipChange,
+	onNodeClick,
 	highlightSet,
+	isInteractionLocked = false,
 	curveOffset = 30,
 	mergeBidirectional = false,
 }: NetworkGraphProps) => {
@@ -232,11 +236,16 @@ export const NetworkGraph = ({
 					.attr("stroke", isHighlighted ? "#000" : "#fff")
 					.attr("stroke-width", isHighlighted ? 2.5 : 1.5);
 				onTooltipChangeRef.current(null);
+			})
+			.on("click", (event: MouseEvent, d: ProcessedNode) => {
+				event.stopPropagation();
+				onNodeClick?.(d.id);
 			});
 
 		// Drag behavior
 		const drag = d3
 			.drag<SVGGElement, ProcessedNode>()
+			.filter(() => !isInteractionLocked)
 			.on("start", (event, d) => {
 				if (!event.active) simulation.alphaTarget(0.3).restart();
 				d.fx = d.x;
@@ -254,7 +263,9 @@ export const NetworkGraph = ({
 				d3.select(event.sourceEvent.currentTarget).attr("cursor", "grab");
 			});
 
-		nodeGroup.call(drag);
+		nodeGroup
+			.attr("cursor", isInteractionLocked ? "default" : "grab")
+			.call(drag);
 
 		// Force simulation
 		const simulation = d3
@@ -316,7 +327,7 @@ const cx = mx + px * curveOffset;
 					d3.zoomIdentity.translate(tx, ty).scale(scale),
 				);
 		});
-	}, [nodes, edges, curveOffset, mergeBidirectional]);
+	}, [nodes, edges, curveOffset, mergeBidirectional, isInteractionLocked]);
 
 	useEffect(() => {
 		initGraph();
@@ -393,12 +404,30 @@ const cx = mx + px * curveOffset;
 			linkGroup.each(function (d) {
 				const el = d3.select(this);
 				const isHighlighted = highlightSet.edgeIds.has(d.id);
+				const isReverseHighlighted = highlightSet.reverseEdgeIds?.has(d.id) ?? false;
 
-				el.transition()
-					.duration(TRANSITION_MS)
-					.attr("stroke", isHighlighted ? "#000" : "#999")
-					.attr("stroke-opacity", isHighlighted ? 1 : 0.08)
-					.attr("stroke-width", isHighlighted ? 2.5 : 1);
+				if (isHighlighted) {
+					// Primary match: full highlight
+					el.transition()
+						.duration(TRANSITION_MS)
+						.attr("stroke", "#000")
+						.attr("stroke-opacity", 1)
+						.attr("stroke-width", 2.5);
+				} else if (isReverseHighlighted) {
+					// Reverse direction match: lighter highlight to show opposite direction
+					el.transition()
+						.duration(TRANSITION_MS)
+						.attr("stroke", "#666")
+						.attr("stroke-opacity", 0.5)
+						.attr("stroke-width", 1.5);
+				} else {
+					// Not matched: dim
+					el.transition()
+						.duration(TRANSITION_MS)
+						.attr("stroke", "#999")
+						.attr("stroke-opacity", 0.08)
+						.attr("stroke-width", 1);
+				}
 			});
 		}
 	}, [highlightSet]);
@@ -408,7 +437,7 @@ const cx = mx + px * curveOffset;
 			<svg
 				ref={svgRef}
 				className="w-full h-full"
-				style={{ background: "#fafafa" }}
+				style={{ background: "#fafafa", cursor: "grab" }}
 			/>
 		</div>
 	);
