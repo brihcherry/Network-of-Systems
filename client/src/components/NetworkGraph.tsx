@@ -183,7 +183,7 @@ export const NetworkGraph = ({
 			.selectAll("g")
 			.data(nodes)
 			.join("g")
-			.attr("cursor", "grab");
+			.attr("cursor", "pointer");
 
 		nodeGroupRef.current = nodeGroup;
 
@@ -265,11 +265,11 @@ export const NetworkGraph = ({
 					d.fx = null;
 					d.fy = null;
 				}
-				d3.select(event.sourceEvent.currentTarget).attr("cursor", "grab");
+				d3.select(event.sourceEvent.currentTarget).attr("cursor", "pointer");
 			});
 
 		nodeGroup
-			.attr("cursor", "grab")
+			.attr("cursor", "pointer")
 			.call(drag);
 
 		// Force simulation
@@ -458,7 +458,7 @@ const cx = mx + px * curveOffset;
 			<svg
 				ref={svgRef}
 				className="w-full h-full"
-				style={{ background: "#fafafa", cursor: "grab" }}
+				style={{ background: "#fafafa", cursor: "default" }}
 			/>
 		</div>
 	);

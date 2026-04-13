@@ -215,6 +215,9 @@ export function getConnectionsAtDepth(
 	// Always include the selected node
 	nodeIds.add(selectedNode);
 
+	// Track visited nodes to avoid re-expanding inward
+	const visited = new Set<string>([selectedNode]);
+
 	// Start with the selected node as the frontier
 	let frontier = new Set<string>([selectedNode]);
 
@@ -277,7 +280,10 @@ export function getConnectionsAtDepth(
 			if (isMatch && fromFrontier && connectedNode !== null) {
 				edgeIds.add(edge.id);
 				nodeIds.add(connectedNode);
-				nextFrontier.add(connectedNode);
+				if (!visited.has(connectedNode)) {
+					nextFrontier.add(connectedNode);
+					visited.add(connectedNode);
+				}
 			}
 
 			// If edge matches reverse direction (bidirectional case), mark it separately

@@ -167,7 +167,7 @@ export const GraphSidebar = ({
 				<h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
 					Connection Explorer
 				</h3>
-				{selectedNode && (
+				{selectedNode ? (
 					<div className="rounded bg-blue-50 border border-blue-200 p-2 text-xs">
 						<div className="font-medium text-blue-900 truncate">
 							Selected: {selectedNode.split("/").pop()}
@@ -179,56 +179,54 @@ export const GraphSidebar = ({
 							Clear Selection
 						</button>
 					</div>
+				) : (
+					<div className="rounded bg-gray-100 border border-gray-200 p-2 text-xs text-gray-500 text-center">
+						Please select a node on the canvas to use this tool.
+					</div>
 				)}
-				{selectedNode && (
-					<div className="flex flex-col gap-2">
-						<label className="text-xs font-medium text-gray-700">
-							Connection Type
-						</label>
-						<select
-							value={connectionMode || ""}
-							onChange={(e) => {
-								const val = e.target.value as ConnectionMode;
-								onConnectionModeChange(val);
-								if (activeMode !== "connections") {
-									onModeChange("connections");
-								}
-							}}
-							className="w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+				<div className="flex flex-col gap-2">
+					<label className={`text-xs font-medium ${selectedNode ? "text-gray-700" : "text-gray-400"}`}>
+						Connection Type
+					</label>
+					<select
+						value={connectionMode || ""}
+						onChange={(e) => {
+							const val = e.target.value as ConnectionMode;
+							onConnectionModeChange(val);
+							if (activeMode !== "connections") {
+								onModeChange("connections");
+							}
+						}}
+						disabled={!selectedNode}
+						className={`w-full rounded border bg-white px-2.5 py-1.5 text-xs shadow-sm focus:outline-none ${selectedNode ? "border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500" : "border-gray-200 text-gray-400 cursor-not-allowed"}`}
+					>
+						<option value="">Choose connection type…</option>
+						<option value="adjacent">Highlight Adjacent</option>
+						<option value="upstream">Upstream Only</option>
+						<option value="downstream">Downstream Only</option>
+					</select>
+					{connectionMode && (
+						<div className="text-xs text-gray-600 italic">
+							{connectionMode === "adjacent"
+								? "All incoming and outgoing connections"
+								: connectionMode === "upstream"
+									? "Incoming direct Provide connections to this node"
+									: "Outgoing Provide and Relation connections from this node"}
+						</div>
+					)}
+					{connectionMode && (
+						<Button
+							variant="default"
+							className="w-full"
+							onClick={onExpandConnections}
+							disabled={!canExpandConnections}
 						>
-							<option value="">Choose connection type…</option>
-							<option value="adjacent">Highlight Adjacent</option>
-							<option value="upstream">Upstream Only</option>
-							<option value="downstream">Downstream Only</option>
-						</select>
-						{connectionMode && (
-							<div className="text-xs text-gray-600 italic">
-								{connectionMode === "adjacent"
-									? "All incoming and outgoing connections"
-									: connectionMode === "upstream"
-										? "Incoming direct Provide connections to this node"
-										: "Outgoing Provide and Relation connections from this node"}
-							</div>
-						)}
-						{connectionMode && (
-							<Button
-								variant="default"
-								className="w-full"
-								onClick={onExpandConnections}
-								disabled={!canExpandConnections}
-							>
-								{!canExpandConnections
-									? "No more connections"
-									: `Expand Connections ${connectionDepth > 0 ? `(Level ${connectionDepth})` : ""}`}
-							</Button>
-						)}
-					</div>
-				)}
-				{!selectedNode && (
-					<div className="text-xs text-gray-500">
-						Click a node on the canvas to explore its connections
-					</div>
-				)}
+							{!canExpandConnections
+								? "No more connections"
+								: `Expand Connections ${connectionDepth > 0 ? `(Level ${connectionDepth})` : ""}`}
+						</Button>
+					)}
+				</div>
 			</div>
 
 			<hr className="border-gray-200" />
