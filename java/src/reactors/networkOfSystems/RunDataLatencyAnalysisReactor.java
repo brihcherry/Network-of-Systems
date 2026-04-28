@@ -1,4 +1,4 @@
-package reactors;
+package reactors.networkOfSystems;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 import prerna.sablecc2.om.PixelDataType;
 import prerna.sablecc2.om.ReactorKeysEnum;
 import prerna.sablecc2.om.nounmeta.NounMetadata;
+import reactors.AbstractProjectReactor;
 import util.QueryExecutor;
 
 /**

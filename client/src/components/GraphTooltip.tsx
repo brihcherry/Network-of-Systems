@@ -63,9 +63,6 @@ export const GraphTooltip = ({ tooltip }: GraphTooltipProps) => {
 						<span className="text-gray-400">Frequency:</span>{" "}
 						{tooltip.edge.frequency || "N/A"}
 					</div>
-					<div className="text-gray-400 mt-1 italic text-[10px]">
-						{tooltip.edge.interfaceName || "N/A"}
-					</div>
 
 					{/* Reverse direction (bidirectional edges on V2 page only) */}
 					{tooltip.edge.bidirectional && tooltip.edge.reverseEdgeData && (
@@ -88,9 +85,6 @@ export const GraphTooltip = ({ tooltip }: GraphTooltipProps) => {
 							<div>
 								<span className="text-gray-400">Frequency:</span>{" "}
 								{tooltip.edge.reverseEdgeData.frequency || "N/A"}
-							</div>
-							<div className="text-gray-400 mt-1 italic text-[10px]">
-								{tooltip.edge.reverseEdgeData.interfaceName || "N/A"}
 							</div>
 						</>
 					)}
