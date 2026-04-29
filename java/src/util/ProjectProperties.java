@@ -14,17 +14,16 @@ import prerna.util.Utility;
 // preExecute() to initialize it. After that, getInstance() returns the cached instance.
 //
 // To add a new property:
-//   1. Add the key=value to java/project.properties
-//   2. Add a private field and getter in this class
-//   3. Read the value in loadProp() using projectProperties.getProperty("yourKey")
+//   1. Add key=value to java/project.properties
+//   2. Add a private field and getter below
+//   3. Read the value in loadProp() via projectProperties.getProperty("yourKey")
 public class ProjectProperties {
 
   private static final Logger LOGGER = LogManager.getLogger(ProjectProperties.class);
 
   private static ProjectProperties INSTANCE = null;
 
-  // TODO: Add a field for each property you want to expose, e.g.:
-  //   private String engineId;
+  private String databaseId;
 
   private ProjectProperties() {}
 
@@ -56,8 +55,7 @@ public class ProjectProperties {
       Properties projectProperties = new Properties();
       projectProperties.load(fileIn);
 
-      // TODO: Read properties and assign to fields, e.g.:
-      //   newInstance.engineId = projectProperties.getProperty("engineId");
+      newInstance.databaseId = projectProperties.getProperty("databaseId");
 
       INSTANCE = newInstance;
     } catch (IOException e) {
@@ -66,7 +64,6 @@ public class ProjectProperties {
     }
   }
 
-  // TODO: Add getters for each property, e.g.:
-  //   public String getEngineId() { return engineId; }
+  public String getDatabaseId() { return databaseId; }
 
 }

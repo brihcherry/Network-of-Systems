@@ -13,8 +13,6 @@ import { getGraphData, type GraphDataResult } from "@/lib/graphData";
 import { findLoops, findIslands, type HighlightSet, getConnectionsAtDepth } from "@/lib/graphAnalysis";
 import type { TooltipData, RawGraphData } from "@/types/graph";
 
-const DATABASE_ID = "133db94b-4371-4763-bff9-edf7e5ed021b";
-
 interface DataObjectOption {
 	uri: string;
 	label: string;
@@ -61,7 +59,7 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 		if (!insightId) return;
 
 		let cancelled = false;
-		const pixel = `ListDataObjects(database=["${DATABASE_ID}"]);`;
+		const pixel = `ListDataObjects();`;
 
 		setIsLoadingOptions(true);
 		setLoadError(null);
@@ -95,7 +93,7 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 		if (!insightId || !selectedDataObject) return;
 
 		let cancelled = false;
-		const pixel = `GetGraphForDataObject(database=["${DATABASE_ID}"], dataObject=["${selectedDataObject.uri}"]);`;
+		const pixel = `GetGraphForDataObject(dataObject=["${selectedDataObject.uri}"]);`;
 
 		setIsLoadingGraph(true);
 		setGraphError(null);
@@ -203,7 +201,7 @@ export const NetworkPage = ({ edgeStyle = "curved" }: NetworkPageProps) => {
 		let cancelled = false;
 		// Single call: no thresholdHours parameter. Reactor uses fixed 1000h and returns all scores.
 		// selectedNodeUri omitted here to match legacy pattern (all roots, no specific node selected).
-		const pixel = `RunDataLatencyAnalysis(database=["${DATABASE_ID}"], dataObject=["${selectedDataObject.uri}"]);`;
+		const pixel = `RunDataLatencyAnalysis(dataObject=["${selectedDataObject.uri}"]);`;
 
 		setIsLoadingLatency(true);
 

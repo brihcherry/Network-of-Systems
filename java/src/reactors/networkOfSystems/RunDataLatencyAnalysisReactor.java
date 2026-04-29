@@ -171,12 +171,15 @@ public class RunDataLatencyAnalysisReactor extends AbstractProjectReactor {
         DATA_OBJECT_KEY,
         SELECTED_NODE_URI_KEY
     };
-    this.keyRequired = new int[] {1, 1, 0};
+    this.keyRequired = new int[] {0, 1, 0};
   }
 
   @Override
   protected NounMetadata doExecute() {
     String engineId = this.keyValue.get(DATABASE_KEY);
+    if (engineId == null || engineId.isEmpty()) {
+      engineId = projectProperties.getDatabaseId();
+    }
     String dataObjectUri = this.keyValue.get(DATA_OBJECT_KEY);
     String selectedNodeUri = this.keyValue.get(SELECTED_NODE_URI_KEY);
 

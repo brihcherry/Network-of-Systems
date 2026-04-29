@@ -48,12 +48,15 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
 
   public GetGraphForDataObjectReactor() {
     this.keysToGet = new String[] { DATABASE_KEY, DATA_OBJECT_KEY };
-    this.keyRequired = new int[] { 1, 1 };
+    this.keyRequired = new int[] { 0, 1 };
   }
 
   @Override
   protected NounMetadata doExecute() {
     String engineId = this.keyValue.get(DATABASE_KEY);
+    if (engineId == null || engineId.isEmpty()) {
+      engineId = projectProperties.getDatabaseId();
+    }
     String dataObjectUri = this.keyValue.get(DATA_OBJECT_KEY);
     LOGGER.info("GetGraphForDataObject: engine=" + engineId + " dataObject=" + dataObjectUri);
 

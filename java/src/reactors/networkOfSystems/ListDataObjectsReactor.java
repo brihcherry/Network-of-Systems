@@ -45,12 +45,15 @@ public class ListDataObjectsReactor extends AbstractProjectReactor {
 
   public ListDataObjectsReactor() {
     this.keysToGet = new String[] { DATABASE_KEY };
-    this.keyRequired = new int[] { 1 };
+    this.keyRequired = new int[] { 0 };
   }
 
   @Override
   protected NounMetadata doExecute() {
     String engineId = this.keyValue.get(DATABASE_KEY);
+    if (engineId == null || engineId.isEmpty()) {
+      engineId = projectProperties.getDatabaseId();
+    }
     LOGGER.info("ListDataObjects: querying engine " + engineId);
 
     QueryExecutor executor = new QueryExecutor(engineId);
