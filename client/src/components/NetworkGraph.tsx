@@ -19,10 +19,10 @@ interface NetworkGraphProps {
 	mergeBidirectional?: boolean;
 }
 
-// Force layout parameters (matching legacy force-graph defaults)
-const CHARGE_STRENGTH = -200;
-const LINK_DISTANCE = 60;
-const CENTER_GRAVITY = 0.09;
+// Force layout parameters (adjusted for better spacing and readability)
+const CHARGE_STRENGTH = -450;  // Increased repulsion for better node spacing
+const LINK_DISTANCE = 110;      // Increased desired distance between connected nodes
+const CENTER_GRAVITY = 0.05;    // Reduced center pull to allow more spread
 const NODE_RADIUS = 8;
 const LABEL_FONT_SIZE = 10;
 const ZOOM_EXTENT: [number, number] = [0.1, 10];

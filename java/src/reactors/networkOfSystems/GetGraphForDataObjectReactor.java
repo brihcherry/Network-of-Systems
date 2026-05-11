@@ -79,6 +79,8 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
 
     List<Map<String, String>> provideRows = executor.executeSelect(provideQuery);
     Set<String> provideSystemUris = new HashSet<>();
+
+    System.out.println("CM Provide rows:" + provideRows.size());
     // Store provide predicate URIs for later property loading
     Map<String, String> providePredicateMap = new HashMap<>(); // systemUri -> providePredicateUri
     for (Map<String, String> row : provideRows) {
@@ -92,10 +94,7 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
     LOGGER.info("GetGraphForDataObject: found " + provideSystemUris.size()
         + " active systems via Provide (CRM=C|M)");
 
-    // ── 2. Get System↔System edges via SystemInterface (ICD) pattern ─────────
-    // Legacy: System2 --upstream(Provide)--> ICD --downstream(Consume)--> System3
-    //   where ICD --carries(Payload)--> DataObject
-    //   and both System2/System3 are ActiveSystem
+    // Get
     String icdQuery =
         "SELECT DISTINCT ?System2 ?System3 ?carries ?contains ?prop WHERE {"
         + " ?System2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "
@@ -115,7 +114,9 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
         + " ?System2 ?upstream1 ?icd1 ."
         + " ?icd1 ?downstream1 ?System3 ."
         + " ?icd1 ?carries <" + dataObjectUri + "> ."
-        + " ?carries ?contains ?prop ."
+        // + " ?carries ?contains ?prop ."
+        + "?icd1 <http://semoss.org/ontologies/Relation/Phase>"
+        + "<http://health.mil/ontologies/Concept/LifeCycle/Supported> ."
         + "}";
 
     List<Map<String, String>> icdRows = executor.executeSelect(icdQuery);
