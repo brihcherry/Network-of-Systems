@@ -1,64 +1,17 @@
 # Network of Systems — Developer Guide
 
-This document covers the backend Java reactor architecture, Pixel API, SPARQL queries, data model, and how the frontend calls each reactor.
+This document covers the SPARQL queries, data model, Pixel API, and internal logic for the four Java reactors powering this application. All data access goes against an RDF triplestore using two ontology namespaces: `http://semoss.org/ontologies/` for concept and relation types and `http://health.mil/ontologies/` for domain instances.
 
 ---
 
-## Architecture Overview
+## Reactor Summaries
 
-### SEMOSS Pixel Reactor Pattern
-
-All backend logic is implemented as **SEMOSS Pixel Reactors**. A Reactor is a Java class that handles exactly one named Pixel command. SEMOSS routes a Pixel expression like `ListDataObjects(database=["..."])` to the class `ListDataObjectsReactor`. The class name, minus the `"Reactor"` suffix, is the registered Pixel command name.
-
-**Execution lifecycle:**
-1. SEMOSS populates the reactor's noun store with parsed Pixel arguments.
-2. `execute()` is called on `AbstractProjectReactor`, which calls `preExecute()` then `doExecute()`.
-3. `preExecute()` resolves `projectId`, loads `ProjectProperties`, resolves `user`, and calls `organizeKeys()`.
-4. `doExecute()` is the subclass business logic — it runs queries and builds the return value.
-5. The return value is always a `NounMetadata` object wrapping data with a `PixelDataType` label.
-6. Any uncaught exception in steps 3–4 is caught by `execute()` and returned as `PixelDataType.CONST_STRING` with `PixelOperationType.ERROR`.
-
-**Data layer:** All data access is SPARQL SELECT queries against an RDF triplestore, accessed via `QueryExecutor`. The ontology uses the namespaces:
-- `http://semoss.org/ontologies/` — concept and relation types
-- `http://health.mil/ontologies/` — domain instances
-
----
-
-## Class: `AbstractProjectReactor`
-
-**Package:** `reactors`  
-**Extends:** `prerna.reactor.AbstractReactor`
-
-Base class for all project reactors. Subclasses must implement `doExecute()`.
-
-### Protected Fields
-
-| Field | Type | Description |
+| Reactor | Pixel Command | Purpose |
 |---|---|---|
-| `user` | `prerna.auth.User` | The authenticated user running the Pixel |
-| `projectId` | `String` | SEMOSS project/app UUID from insight context |
-| `projectProperties` | `ProjectProperties` | Config loaded from `java/project.properties` |
-
-### Key Methods
-
-**`public NounMetadata execute()`**  
-Top-level entry point. Calls `preExecute()` and `doExecute()`. Wraps any uncaught `Exception` into an error `NounMetadata`:
-```java
-return new NounMetadata(e.getMessage(), PixelDataType.CONST_STRING, PixelOperationType.ERROR);
-```
-
-**`protected void preExecute()`**  
-Resolves context. Order of operations:
-1. `projectId` ← `insight.getContextProjectId()` or `insight.getProjectId()`
-2. `projectProperties` ← `ProjectProperties.getInstance(projectId)`
-3. `user` ← `insight.getUser()`
-4. `organizeKeys()` ← populates `this.keyValue` from the noun store
-
-**`protected Map<String, Object> getMap(String paramName)`**  
-Extracts a `MAP`-typed Pixel parameter from the noun store or current row. Returns `null` if absent. Used when the frontend passes a JSON object as a Pixel argument.
-
-**`protected abstract NounMetadata doExecute()`**  
-Each subclass implements its own business logic here.
+| `ListDataObjectsReactor` | `ListDataObjects` | Queries the RDF database for all distinct `DataObject` instances and returns a label/URI list that populates the data object selection dropdown on page load. |
+| `GetGraphForDataObjectReactor` | `GetGraphForDataObject` | Given a selected data object URI, runs four SPARQL queries to identify the systems that provide it and the inter-system interfaces that carry it, then assembles and returns the full node/edge graph payload. |
+| `RunDataLatencyAnalysisReactor` | `RunDataLatencyAnalysis` | Builds the same system graph and performs a single DFS traversal at a fixed 1,000-hour ceiling, scoring every interface edge by its cumulative path frequency. Returns all scored edges grouped by score so the frontend can filter client-side as the user moves the latency slider. |
+| `CompareGraphOutputsReactor` | `CompareGraphOutputs` | Debug-only. Runs the legacy insight #140 playsheet and `GetGraphForDataObjectReactor` against the same data object and diffs their node/edge sets, returning a match report. |
 
 ---
 
@@ -484,13 +437,6 @@ Loads configuration from `{projectAssetsFolder}/java/project.properties`.
 **Thread safety:** Not synchronized. Multiple simultaneous first calls can trigger duplicate `loadProp` invocations. This is non-damaging but worth addressing with a `synchronized` block if needed.
 
 ---
-
-### `Constants` and `HelperMethods`
-
-Both are currently empty scaffolds with `TODO` comments. Add project-wide constants to `Constants` and shared utility functions to `HelperMethods` as the project grows.
-
----
-
 ## Data Model Reference
 
 ### Node (in `GetGraphForDataObject` response)
@@ -592,12 +538,3 @@ ICD (system-to-system) edges use `EDGE_TYPE = "Relation"` and both `source` and 
 
 ---
 
-## Adding a New Reactor
-
-1. Create a new class in the appropriate package under `src/reactors/`, extending `AbstractProjectReactor`.
-2. Declare `this.keysToGet` and `this.keyRequired` in the constructor.
-3. Implement `doExecute()`: use `this.keyValue.get(key)` to read parameters; use `new QueryExecutor(engineId)` for queries.
-4. Return `new NounMetadata(result, PixelDataType.CUSTOM_DATA_STRUCTURE)`.
-5. Implement `getReactorDescription()` and `getDescriptionForKey(String key)` for MCP manifest generation.
-6. Register the reactor class with SEMOSS so its name is resolvable from Pixel.
-7. Call it from the frontend via `actions.run('YourCommand(param=["value"]);')`.
