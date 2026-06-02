@@ -13,6 +13,15 @@ This document covers the SPARQL queries, data model, Pixel API, and internal log
 | `RunDataLatencyAnalysisReactor` | `RunDataLatencyAnalysis` | Builds the same system graph and performs a single DFS traversal at a fixed 1,000-hour ceiling, scoring every interface edge by its cumulative path frequency. Returns all scored edges grouped by score so the frontend can filter client-side as the user moves the latency slider. |
 | `CompareGraphOutputsReactor` | `CompareGraphOutputs` | Debug-only. Runs the legacy insight #140 playsheet and `GetGraphForDataObjectReactor` against the same data object and diffs their node/edge sets, returning a match report. |
 
+### Frontend Route Surface (Current)
+
+The client UI currently exposes two routes in the top navigation:
+
+| Route | Purpose |
+|---|---|
+| `/` | Main Network of Systems graph experience |
+| `/debug-comparison` | Developer-only graph comparison utility |
+
 ---
 
 ## Reactor: `ListDataObjectsReactor`

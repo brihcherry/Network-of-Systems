@@ -10,12 +10,11 @@ This application lets you explore the network of IT systems surrounding any sele
 
 Navigate to the app in your SEMOSS environment. The app loads automatically and connects to the backend. While it initializes you will see a full-screen loading spinner. If initialization fails, an error screen appears with guidance to contact support.
 
-Once loaded, the navigation bar at the top shows three sections:
+Once loaded, the navigation bar at the top shows two sections:
 
 | Link | What it does |
 |---|---|
 | **Network of Systems** | Main graph view with curved edges (default) |
-| **Network of Systems V2** | Same graph using straight, bidirectional edge arrows |
 | **Debug Comparison** | Developer utility for regression testing (not for general use) |
 
 ---
@@ -71,8 +70,6 @@ Hovering over any edge shows:
 - Edge type
 - Data, Format, Protocol, Frequency fields (when available)
 - Interface name
-
-On the V2 page, bidirectional edges (A→B and B→A shown as one arrow) also display the reverse-direction properties in a separate section below a divider.
 
 ---
 
@@ -148,18 +145,6 @@ This tool lets you trace the specific connections of any single node in the grap
 Status text below the buttons confirms the current state.
 
 **Reset Button:** At the bottom of the sidebar, the **Reset** button clears the active analysis mode (Loop, Island, or Latency) and restores the full graph view with no highlighting.
-
----
-
-## Graph Versions (V1 vs V2)
-
-| Feature | Network of Systems (V1) | Network of Systems V2 |
-|---|---|---|
-| Edge style | Curved arcs | Straight lines |
-| Bidirectional pairs | Two separate curved arcs bowing apart | Single double-headed arrow |
-| Tooltip on reverse direction | Not shown | Shown below a divider |
-
-Both versions show identical data and support all the same analysis tools.
 
 ---
 
