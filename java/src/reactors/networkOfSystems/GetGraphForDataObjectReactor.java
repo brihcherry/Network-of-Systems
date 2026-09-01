@@ -320,16 +320,32 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
 
   @Override
   public String getReactorDescription() {
-    return "Returns the full network-of-systems graph for a selected DataObject.";
+    return "Builds the network of systems that surround a single data object. "
+        + "Given the URI of a DataObject, this returns a graph showing every active system that "
+        + "creates or maintains that data (Provide relationships with CRM of C or M) and every "
+        + "system-to-system interface (ICD) whose payload carries that data object. "
+        + "The response is a graph structure containing a 'nodes' map keyed by URI (the data "
+        + "object node plus one node per system, each with label, type, color and all ontology "
+        + "properties) and an 'edges' list (each with source URI, target URI and edge properties "
+        + "such as EDGE_NAME, EDGE_TYPE and interface attributes). "
+        + "Use ListDataObjects first to look up the exact data object URI to pass in. "
+        + "Use this tool to answer questions like 'which systems provide or exchange Admissions "
+        + "data?' or 'show me the system network around this data object'.";
   }
 
   @Override
   public String getDescriptionForKey(String key) {
     if (DATABASE_KEY.equals(key)) {
-      return "The UUID of the RDF database engine to query.";
+      return "Optional. The UUID of the RDF database engine holding the systems ontology to "
+          + "query, for example '133db94b-4371-4763-bff9-edf7e5ed021b'. If omitted, the project's "
+          + "default database configured in java/project.properties is used. Leave this out unless "
+          + "the user explicitly names a different database.";
     }
     if (DATA_OBJECT_KEY.equals(key)) {
-      return "The full URI of the DataObject to build the network for.";
+      return "Required. The full URI of the DataObject to build the network for, for example "
+          + "'http://health.mil/ontologies/Concept/DataObject/Admissions'. This must be a complete "
+          + "URI, not a display label; call the ListDataObjects tool to retrieve valid URIs and "
+          + "match the user's wording to the closest label before calling this tool.";
     }
     return null;
   }

@@ -80,13 +80,23 @@ public class ListDataObjectsReactor extends AbstractProjectReactor {
 
   @Override
   public String getReactorDescription() {
-    return "Returns the list of distinct DataObject names from the RDF database.";
+    return "Lists every data object tracked in the systems ontology. "
+        + "Returns one entry per distinct DataObject, each containing 'uri' (the full ontology "
+        + "URI, for example 'http://health.mil/ontologies/Concept/DataObject/Admissions') and "
+        + "'label' (a human readable name such as 'Admissions'). "
+        + "Call this tool first to discover what data objects exist, or to translate a user's "
+        + "wording into the exact URI required by the GetGraphForDataObject tool. "
+        + "Use it to answer questions like 'what data objects are available?' or 'which data can "
+        + "I see the system network for?'.";
   }
 
   @Override
   public String getDescriptionForKey(String key) {
     if (DATABASE_KEY.equals(key)) {
-      return "The UUID of the RDF database engine to query.";
+      return "Optional. The UUID of the RDF database engine holding the systems ontology to "
+          + "query, for example '133db94b-4371-4763-bff9-edf7e5ed021b'. If omitted, the project's "
+          + "default database configured in java/project.properties is used. Leave this out unless "
+          + "the user explicitly names a different database.";
     }
     return null;
   }
