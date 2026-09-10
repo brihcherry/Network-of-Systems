@@ -42,7 +42,7 @@
             "name": "GetGraphForDataObject",
             "description": "Returns the full network-of-systems graph for a selected DataObject.",
             "_meta": {
-                "SMSS_MCP_UI": {},
+                "SMSS_MCP_UI": {"resourceURI": "/#/"},
                 "SMSS_FUNCTION_NAME": "GetGraphForDataObject",
                 "SMSS_MCP_EXECUTION": "auto"
             },
