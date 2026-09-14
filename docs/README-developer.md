@@ -65,7 +65,7 @@ For each result row:
 ### Frontend Pixel Call
 
 ```js
-actions.run('ListDataObjects();')
+actions.run('ListDataObjects(database=["133db94b-4371-4763-bff9-edf7e5ed021b"]);')
 ```
 
 ---

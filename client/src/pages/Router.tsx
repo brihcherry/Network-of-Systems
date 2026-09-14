@@ -29,6 +29,10 @@ const router = createHashRouter([
 			//     Component: YourPage,
 			// },
 			{
+				path: '/debug-comparison',
+				Component: DebugComparisonPage,
+			},
+			{
 				// Catch-all: redirect unknown routes to home
 				path: "*",
 				Component: () => <Navigate to="/" />,
