@@ -10,7 +10,8 @@ test-classes/
 
 # Local configuration files
 *.local
-# java/project.properties
+java/project.properties
+**/project.properties
 .admin/
 **/.DS_Store
 **/.env

@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import prerna.sablecc2.om.PixelDataType;
-import prerna.sablecc2.om.ReactorKeysEnum;
 import prerna.sablecc2.om.nounmeta.NounMetadata;
 import reactors.AbstractProjectReactor;
 import util.QueryExecutor;
@@ -31,7 +30,6 @@ import util.QueryExecutor;
  * <p>Pixel call:
  * <pre>
  *   GetGraphForDataObject(
- *     database=["133db94b-4371-4763-bff9-edf7e5ed021b"],
  *     dataObject=["http://health.mil/ontologies/Concept/DataObject/Admissions"]
  *   );
  * </pre>
@@ -40,23 +38,19 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
 
   private static final Logger LOGGER = LogManager.getLogger(GetGraphForDataObjectReactor.class);
 
-  private static final String DATABASE_KEY = ReactorKeysEnum.DATABASE.getKey();
   private static final String DATA_OBJECT_KEY = "dataObject";
 
   private static final String SYSTEM_COLOR = "31,119,180";
   private static final String DATA_OBJECT_COLOR = "255,127,14";
 
   public GetGraphForDataObjectReactor() {
-    this.keysToGet = new String[] { DATABASE_KEY, DATA_OBJECT_KEY };
-    this.keyRequired = new int[] { 0, 1 };
+    this.keysToGet = new String[] { DATA_OBJECT_KEY };
+    this.keyRequired = new int[] { 1 };
   }
 
   @Override
   protected NounMetadata doExecute() {
-    String engineId = this.keyValue.get(DATABASE_KEY);
-    if (engineId == null || engineId.isEmpty()) {
-      engineId = projectProperties.getDatabaseId();
-    }
+    String engineId = projectProperties.getDatabaseId();
     String dataObjectUri = this.keyValue.get(DATA_OBJECT_KEY);
     LOGGER.info("GetGraphForDataObject: engine=" + engineId + " dataObject=" + dataObjectUri);
 
@@ -335,12 +329,6 @@ public class GetGraphForDataObjectReactor extends AbstractProjectReactor {
 
   @Override
   public String getDescriptionForKey(String key) {
-    if (DATABASE_KEY.equals(key)) {
-      return "Optional. The UUID of the RDF database engine holding the systems ontology to "
-          + "query, for example '133db94b-4371-4763-bff9-edf7e5ed021b'. If omitted, the project's "
-          + "default database configured in java/project.properties is used. Leave this out unless "
-          + "the user explicitly names a different database.";
-    }
     if (DATA_OBJECT_KEY.equals(key)) {
       return "Required. The full URI of the DataObject to build the network for, for example "
           + "'http://health.mil/ontologies/Concept/DataObject/Admissions'. This must be a complete "

@@ -47,6 +47,37 @@ export default defineConfig(({ mode }) => {
 			// Build output goes to portals/, which SEMOSS serves when the app is published
 			outDir: "../../portals",
 			emptyOutDir: true,
+			chunkSizeWarningLimit: 800,
+			rollupOptions: {
+				output: {
+					manualChunks(id) {
+						if (!id.includes("node_modules")) return;
+						if (
+							id.includes("react") ||
+							id.includes("react-dom") ||
+							id.includes("react-router-dom")
+						) {
+							return "react-vendor";
+						}
+						if (id.includes("@semoss")) {
+							return "semoss";
+						}
+						if (id.includes("d3")) {
+							return "d3";
+						}
+						if (
+							id.includes("sonner") ||
+							id.includes("lucide-react") ||
+							id.includes("clsx") ||
+							id.includes("tailwind-merge") ||
+							id.includes("class-variance-authority")
+						) {
+							return "ui";
+						}
+						return "vendor";
+					},
+				},
+			},
 		},
 		plugins: [react(), tailwindcss()],
 	};

@@ -64,6 +64,8 @@ public class ProjectProperties {
     }
   }
 
-  public String getDatabaseId() { return databaseId; }
+  public String getDatabaseId() {
+    return databaseId;
+  }
 
 }

@@ -15,7 +15,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import prerna.sablecc2.om.PixelDataType;
-import prerna.sablecc2.om.ReactorKeysEnum;
 import prerna.sablecc2.om.nounmeta.NounMetadata;
 import reactors.AbstractProjectReactor;
 import util.QueryExecutor;
@@ -33,7 +32,7 @@ import util.QueryExecutor;
  * <ul>
  *   <li><strong>Invocation:</strong> Client calls once per analysis session (not once per slider
  *       movement). Example: <br>
- *       {@code RunDataLatencyAnalysis(database=["..."], dataObject=["..."]);}
+ *       {@code RunDataLatencyAnalysis(dataObject=["..."]);}
  *   <li><strong>Threshold:</strong> Fixed at 1000 hours internally (legacy default). No
  *       thresholdHours parameter is accepted or needed.
  *   <li><strong>Roots:</strong> Traversal starts from all vertices (or single selectedNodeUri if
@@ -158,7 +157,6 @@ public class RunDataLatencyAnalysisReactor extends AbstractProjectReactor {
 
   private static final Logger LOGGER = LogManager.getLogger(RunDataLatencyAnalysisReactor.class);
 
-  private static final String DATABASE_KEY = ReactorKeysEnum.DATABASE.getKey();
   private static final String DATA_OBJECT_KEY = "dataObject";
   private static final String SELECTED_NODE_URI_KEY = "selectedNodeUri";
 
@@ -167,19 +165,15 @@ public class RunDataLatencyAnalysisReactor extends AbstractProjectReactor {
 
   public RunDataLatencyAnalysisReactor() {
     this.keysToGet = new String[] {
-        DATABASE_KEY,
         DATA_OBJECT_KEY,
         SELECTED_NODE_URI_KEY
     };
-    this.keyRequired = new int[] {0, 1, 0};
+    this.keyRequired = new int[] {1, 0};
   }
 
   @Override
   protected NounMetadata doExecute() {
-    String engineId = this.keyValue.get(DATABASE_KEY);
-    if (engineId == null || engineId.isEmpty()) {
-      engineId = projectProperties.getDatabaseId();
-    }
+    String engineId = projectProperties.getDatabaseId();
     String dataObjectUri = this.keyValue.get(DATA_OBJECT_KEY);
     String selectedNodeUri = this.keyValue.get(SELECTED_NODE_URI_KEY);
 
@@ -703,9 +697,6 @@ public class RunDataLatencyAnalysisReactor extends AbstractProjectReactor {
 
   @Override
   public String getDescriptionForKey(String key) {
-    if (DATABASE_KEY.equals(key)) {
-      return "The UUID of the RDF database engine to query.";
-    }
     if (DATA_OBJECT_KEY.equals(key)) {
       return "The full URI of the DataObject to analyze (e.g., http://health.mil/ontologies/Concept/DataObject/Allergies).";
     }

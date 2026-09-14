@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import prerna.sablecc2.om.PixelDataType;
-import prerna.sablecc2.om.ReactorKeysEnum;
 import prerna.sablecc2.om.nounmeta.NounMetadata;
 import reactors.AbstractProjectReactor;
 import util.QueryExecutor;
@@ -17,10 +16,11 @@ import util.QueryExecutor;
 /**
  * Returns the list of distinct DataObject entries from the TAP_Core_Data RDF database.
  * Each entry includes the full URI (needed by GetGraphForDataObject) and a display label.
+ * The database engine ID is read from java/project.properties (not a Pixel param).
  *
  * <p>Pixel call:
  * <pre>
- *   ListDataObjects(database=["133db94b-4371-4763-bff9-edf7e5ed021b"]);
+ *   ListDataObjects();
  * </pre>
  *
  * <p>Output: List of {uri, label} maps, e.g.:
@@ -35,8 +35,6 @@ public class ListDataObjectsReactor extends AbstractProjectReactor {
 
   private static final Logger LOGGER = LogManager.getLogger(ListDataObjectsReactor.class);
 
-  private static final String DATABASE_KEY = ReactorKeysEnum.DATABASE.getKey();
-
   private static final String DATA_OBJECTS_QUERY =
       "SELECT DISTINCT ?DataObject WHERE {"
       + " ?DataObject <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "
@@ -44,16 +42,13 @@ public class ListDataObjectsReactor extends AbstractProjectReactor {
       + "} ORDER BY ?DataObject";
 
   public ListDataObjectsReactor() {
-    this.keysToGet = new String[] { DATABASE_KEY };
-    this.keyRequired = new int[] { 0 };
+    this.keysToGet = new String[] {};
+    this.keyRequired = new int[] {};
   }
 
   @Override
   protected NounMetadata doExecute() {
-    String engineId = this.keyValue.get(DATABASE_KEY);
-    if (engineId == null || engineId.isEmpty()) {
-      engineId = projectProperties.getDatabaseId();
-    }
+    String engineId = projectProperties.getDatabaseId();
     LOGGER.info("ListDataObjects: querying engine " + engineId);
 
     QueryExecutor executor = new QueryExecutor(engineId);
@@ -92,12 +87,6 @@ public class ListDataObjectsReactor extends AbstractProjectReactor {
 
   @Override
   public String getDescriptionForKey(String key) {
-    if (DATABASE_KEY.equals(key)) {
-      return "Optional. The UUID of the RDF database engine holding the systems ontology to "
-          + "query, for example '133db94b-4371-4763-bff9-edf7e5ed021b'. If omitted, the project's "
-          + "default database configured in java/project.properties is used. Leave this out unless "
-          + "the user explicitly names a different database.";
-    }
     return null;
   }
 }
